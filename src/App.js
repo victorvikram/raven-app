@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 
 import axios from 'axios';
 
+let url = "https://ravenserver.herokuapp.com"
 
 class TextInput extends React.Component {
 
@@ -69,7 +70,7 @@ class MainComponent extends React.Component {
   }
 
   generateBlueprint() {
-    let requestUrl = "/blueprint";
+    let requestUrl = url + "/blueprint";
     fetch(requestUrl)
       .then((res) => res.json())
       .then((data) => {
@@ -78,7 +79,7 @@ class MainComponent extends React.Component {
   }
 
   generateInitials() {
-    let requestUrl = "/initials";
+    let requestUrl = url + "/initials";
     let body = JSON.parse(this.state.blueprint);
     axios
       .post(
@@ -92,7 +93,7 @@ class MainComponent extends React.Component {
   }
 
   structureToLiteral() {
-    let requestUrl = `/literal`;
+    let requestUrl = url + `/literal`;
     let body = [JSON.parse(this.state.blueprint), JSON.parse(this.state.initials)];
     axios
       .post(
@@ -112,7 +113,7 @@ class MainComponent extends React.Component {
     let body = JSON.parse(this.state.literal);
     axios
       .post(
-        '/image',
+        url + '/image',
         body,
         { responseType: 'arraybuffer' },
       )
