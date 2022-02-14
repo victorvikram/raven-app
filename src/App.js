@@ -3,33 +3,40 @@ import React, { useState } from 'react';
 
 import axios from 'axios';
 
-let url = "https://ravenserver.herokuapp.com"
+let url = "http://localhost:5000";
 
 class TextInput extends React.Component {
 
   makeTextAreas() {
     let textAreas = [];
+    let rowList = []
     for(let i in this.props.values) {
-      textAreas.push(
-        <div key={i} className="flex-child">
-          <label>{this.props.fieldNames[i]}</label>
-          {this.props.generators[i] && 
-            <button onClick={this.props.generators[i]}>
-              Random
-            </button>
-          }
-          <textarea value={this.props.values[i]} onChange={this.props.handleChange[i]} />
+      let [rowCount, colCount] = this.calculateRequiredSize(this.props.values[i]);
+      rowList.push(
+        <div key={i % this.props.cols}>
+          <textarea rows={rowCount} cols={colCount} value={this.props.values[i]} onChange={(event) => this.props.handleChange(event, i)} />
         </div>
-      );
+      )
+      if(i % this.props.cols === this.props.cols - 1 || i === this.props.values.length) {
+        textAreas.push(<div className="flex-container" key={Math.floor(i / this.props.cols)}>{rowList}</div>);
+        rowList = []
+      }
     }
     return textAreas;
+  }
+
+  calculateRequiredSize(value) {
+    let arr = value.split("\n");
+    let rowCount = Math.max(arr.length + 1, 5);
+    let colCount =  Math.max(arr.reduce((last, curr) => Math.max(last, curr.length), 0) + 1, 20);
+    return [rowCount, colCount];
   }
   render() {
     return (
       <div className="flex-child">
         {this.makeTextAreas()}
-        <button onClick={this.props.handleSubmit}>
-          {this.props.buttonName}
+        <button onClick={this.props.generator}>
+          {"Generate " + this.props.fieldName}
         </button>
       </div>
     )
@@ -41,6 +48,9 @@ class ImageViewer extends React.Component {
     return (
       <div className="flex-child">
         <img src={this.props.image} alt="raven-problem" />
+        <button onClick={this.props.generator}>
+          {"Generate Image"}
+        </button>
       </div>
     )
   }
@@ -49,7 +59,7 @@ class ImageViewer extends React.Component {
 class MainComponent extends React.Component {
   constructor(props) {
     super(props);
-    this.state = {blueprint: "", initials: "", literal: "", image: ""};
+    this.state = {blueprint: "", initials: ["","",""], literal: Array(9).fill(""), image: "", target: 0};
     
     this.changeBlueprint = this.changeBlueprint.bind(this);
     this.changeInitials = this.changeInitials.bind(this);
@@ -59,14 +69,35 @@ class MainComponent extends React.Component {
     this.structureToImage = this.structureToImage.bind(this);
     this.generateBlueprint = this.generateBlueprint.bind(this);
     this.generateInitials = this.generateInitials.bind(this);
+    this.downloadNPZ = this.downloadNPZ.bind(this);
   }
 
-  changeBlueprint(event) {
+  changeBlueprint(event, i=0) {
+    this.setBoxHeight(event.target);
     this.setState({blueprint: event.target.value});
   }
 
-  changeInitials(event) {
-    this.setState({initials: event.target.value})
+  changeInitials(event, i) {
+    this.setBoxHeight(event.target);
+    let newInitial = this.makeNewArr(event.target.value, i, this.state.initials)
+    this.setState({initials: newInitial})
+  }
+
+  setBoxHeight(box) {
+    box.style.height = 'inherit';
+    box.style.height = `${box.scrollHeight}px`
+  }
+
+  changeLiteral(event, i) {
+    this.setBoxHeight(event.target);
+    let newLiteral = this.makeNewArr(event.target.value, i, this.state.literal)
+    this.setState({literal: newLiteral});
+  }
+
+  makeNewArr(val, index, arr) {
+    let newArr = [...arr];
+    newArr[index] = val;
+    return newArr;
   }
 
   generateBlueprint() {
@@ -87,30 +118,55 @@ class MainComponent extends React.Component {
         body
       )
       .then((response) => {
-        this.setState({initials: JSON.stringify(response.data["results"], null, 2)});
+        let strLst = this.strListify(response.data["results"]);
+        this.setState({initials: strLst});
     });
 
   }
 
+  strListify(lst) {
+    let strLst = []
+    for(let i in lst) {
+      strLst.push(JSON.stringify(lst[i], null, 2))
+    }
+    return strLst;
+  }
+
+  strListParse(lst) {
+    let jsonLst = [];
+    for(let i in lst) {
+      if(lst[i] === "") {
+        jsonLst.push({});
+      } else {
+        jsonLst.push(JSON.parse(lst[i]));
+      }
+    }
+    return jsonLst;
+  }
+
   structureToLiteral() {
     let requestUrl = url + `/literal`;
-    let body = [JSON.parse(this.state.blueprint), JSON.parse(this.state.initials)];
+    let initialJSON = this.strListParse(this.state.initials);
+    let body = [JSON.parse(this.state.blueprint), initialJSON];
     axios
       .post(
         requestUrl,
         body
       )
       .then((response) => {
-        this.setState({literal: JSON.stringify(response.data, null, 2)});
+        let strLst = this.strListify(response.data["panels"]);
+        this.setState({literal: strLst, target: response.data["target"]});
       });
   }
 
-  changeLiteral(event) {
-    this.setState({literal: event.target.value});
+  genFullLiteral() {
+    let fullLiteral = {"target": this.state.target};
+    fullLiteral["panels"] = this.strListParse(this.state.literal);
+    return fullLiteral;
   }
 
   literalToImage() {
-    let body = JSON.parse(this.state.literal);
+    let body = this.genFullLiteral();
     axios
       .post(
         url + '/image',
@@ -124,9 +180,32 @@ class MainComponent extends React.Component {
             '',
           ),
         );
-        this.setState({ image: "data:;base64," + base64 });
+        this.setState({image: "data:;base64," + base64});
       });
+  }
 
+  downloadNPZ(fileName) {
+    let body = this.genFullLiteral();
+    axios
+      .post(
+        url + '/file',
+        body,
+        { responseType: 'blob' },
+      )
+      .then(response => {
+        const url = window.URL.createObjectURL(
+          new Blob([response.data]),
+        );
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute(
+          'download',
+          fileName + ".npz"
+        );
+        document.body.appendChild(link);
+        link.click();
+        link.parentNode.removeChild(link);
+      })
   }
 
   structureToImage() {
@@ -136,31 +215,40 @@ class MainComponent extends React.Component {
     this.setState({image: image})
   }
 
+  sepInitialPanels 
+
   render() {
     return (
       <div>
         <div className="flex-container">
           <TextInput
-            fieldNames={["Blueprint:", "Initial panels:"]}
-            generators={[this.generateBlueprint, this.generateInitials]}
-            values={[this.state.blueprint, this.state.initials]}
-            handleChange={[this.changeBlueprint, this.changeInitials]} 
-            buttonName={"Generate Literal"}
-            handleSubmit={this.structureToLiteral} 
+            fieldName={"Blueprint"}
+            generator={this.generateBlueprint}
+            values={[this.state.blueprint]}
+            handleChange={this.changeBlueprint}
+            cols={1}
+
           />
           <TextInput
-            fieldNames={["Literal problem representation:"]}
-            generators={[null]}
-            values={[this.state.literal]}
-            handleChange={[this.changeLiteral]}
-            buttonName={"Generate Image"}
-            handleSubmit={this.literalToImage}
+            fieldName={"Initial Panels"}
+            generator={this.generateInitials}
+            values={this.state.initials}
+            handleChange={this.changeInitials}
+            cols={1}
+          />
+          <TextInput
+            fieldName={"All Panels"}
+            generator={this.structureToLiteral}
+            values={this.state.literal}
+            handleChange={this.changeLiteral}
+            cols={3}
           />
           <ImageViewer
+            generator={this.literalToImage}
             image={this.state.image}
           />
         </div>
-        <DownloadButton image={this.state.image} literal={this.state.literal} />
+        <DownloadButton image={this.state.image} literal={this.genFullLiteral()} downloadNPZ={this.downloadNPZ} />
       </div>
        
     )
@@ -168,12 +256,12 @@ class MainComponent extends React.Component {
 }
 
 export function DownloadButton(props) {
-  const {image, literal} = props;
+  const {image, literal, downloadNPZ} = props;
   let [fileName, setFileName] = useState("");
 
   let bitString = image.split(',')[1]
   let imageUri = 'data:application/oct-stream;base64,' + bitString;
-  let literalUri = 'data:text/json;charset=utf-8,' + encodeURIComponent(literal);
+  let literalUri = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(literal, null, 2));
 
   return (
     <div className="flex-child">
@@ -184,6 +272,7 @@ export function DownloadButton(props) {
       <a download={fileName + ".json"} href={literalUri}>
         Download Literal
       </a>
+      <button onClick={() => downloadNPZ(fileName)}>Download NPZ</button>
     </div>
   );
 }
