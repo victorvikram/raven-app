@@ -3,7 +3,8 @@ import React, { useState } from 'react';
 
 import axios from 'axios';
 
-let url = "http://ravenserver.herokuapp.com";
+let url = "https://ravenserver.herokuapp.com";
+// let url = "http://localhost:5000";
 
 class TextInput extends React.Component {
 
