@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 
 import axios from 'axios';
 
-let url = "https://ravenserver.herokuapp.com";
+let url = "http://localhost:5000";
 
 class TextInput extends React.Component {
 
@@ -70,27 +70,23 @@ class MainComponent extends React.Component {
     this.generateBlueprint = this.generateBlueprint.bind(this);
     this.generateInitials = this.generateInitials.bind(this);
     this.downloadNPZ = this.downloadNPZ.bind(this);
+    this.downloadLiteral = this.downloadLiteral.bind(this);
   }
 
   changeBlueprint(event, i=0) {
-    this.setBoxHeight(event.target);
     this.setState({blueprint: event.target.value});
   }
 
   changeInitials(event, i) {
-    this.setBoxHeight(event.target);
     let newInitial = this.makeNewArr(event.target.value, i, this.state.initials)
     this.setState({initials: newInitial})
   }
 
-  setBoxHeight(box) {
-    box.style.height = 'inherit';
-    box.style.height = `${box.scrollHeight}px`
-  }
-
   changeLiteral(event, i) {
-    this.setBoxHeight(event.target);
+    console.log("changing literal at", i);
     let newLiteral = this.makeNewArr(event.target.value, i, this.state.literal)
+    console.log(JSON.stringify(newLiteral));
+  
     this.setState({literal: newLiteral});
   }
 
@@ -208,14 +204,27 @@ class MainComponent extends React.Component {
       })
   }
 
+  downloadLiteral(fileName) {
+    let literal = this.genFullLiteral();
+    let literalUri = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(literal, null, 2));
+    const link = document.createElement('a');
+    
+    link.href = literalUri;
+    link.setAttribute(
+      'download',
+      fileName + ".json"
+    );
+    document.body.appendChild(link);
+    link.click();
+    link.parentNode.removeChild(link);
+  }
+
   structureToImage() {
     let literal = "poop poop poop" + this.state.structure;
     let image = "pee pee pee" + literal;
     this.setState({literal: literal})
     this.setState({image: image})
   }
-
-  sepInitialPanels 
 
   render() {
     return (
@@ -248,7 +257,7 @@ class MainComponent extends React.Component {
             image={this.state.image}
           />
         </div>
-        <DownloadButton image={this.state.image} literal={this.genFullLiteral()} downloadNPZ={this.downloadNPZ} />
+        <DownloadButton image={this.state.image} downloadLiteral={this.downloadLiteral} downloadNPZ={this.downloadNPZ} />
       </div>
        
     )
@@ -256,12 +265,11 @@ class MainComponent extends React.Component {
 }
 
 export function DownloadButton(props) {
-  const {image, literal, downloadNPZ} = props;
+  const {image, downloadLiteral, downloadNPZ} = props;
   let [fileName, setFileName] = useState("");
 
   let bitString = image.split(',')[1]
   let imageUri = 'data:application/oct-stream;base64,' + bitString;
-  let literalUri = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(literal, null, 2));
 
   return (
     <div className="flex-child">
@@ -269,9 +277,7 @@ export function DownloadButton(props) {
       <a download={fileName + ".jpg"} href={imageUri}>
         Download Image
       </a>
-      <a download={fileName + ".json"} href={literalUri}>
-        Download Literal
-      </a>
+      <button onClick={() => downloadLiteral(fileName)}>Download JSON</button>
       <button onClick={() => downloadNPZ(fileName)}>Download NPZ</button>
     </div>
   );
