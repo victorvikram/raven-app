@@ -3,19 +3,34 @@ import React, { useState } from 'react';
 
 import axios from 'axios';
 
-let url = "https://ravenserver.herokuapp.com";
-// let url = "http://localhost:5000";
+// let url = "https://ravenserver.herokuapp.com";
+let url = "http://localhost:5000";
 
 class TextInput extends React.Component {
 
   makeTextAreas() {
     let textAreas = [];
     let rowList = []
+  
     for(let i in this.props.values) {
       let [rowCount, colCount] = this.calculateRequiredSize(this.props.values[i]);
+      let style;
+      if (this.props.highlightIndex != null && parseInt(i) === this.props.highlightIndex) {
+        style = "highlighted"
+      } else {
+        style = "regular"
+      }
+      console.log("hl index", this.props.highlightIndex)
+      console.log("i", i)
+      console.log("equal?", i === this.props.highlightIndex)
+      console.log("type", typeof(i))
+      console.log("type", typeof(this.props.highlightIndex))
+      console.log("non null", this.props.highlightIndex != null)
+      
+
       rowList.push(
         <div key={i % this.props.cols}>
-          <textarea rows={rowCount} cols={colCount} value={this.props.values[i]} onChange={(event) => this.props.handleChange(event, i)} />
+          <textarea rows={rowCount} cols={colCount} value={this.props.values[i]} onChange={(event) => this.props.handleChange(event, i)} className={style}/>
         </div>
       )
       if(i % this.props.cols === this.props.cols - 1 || i === this.props.values.length) {
@@ -23,6 +38,10 @@ class TextInput extends React.Component {
         rowList = []
       }
     }
+    if(rowList.length !== 0) {
+      textAreas.push(<div className="flex-container" key={textAreas.length}>{rowList}</div>);
+    }
+
     return textAreas;
   }
 
@@ -35,10 +54,13 @@ class TextInput extends React.Component {
   render() {
     return (
       <div className="flex-child">
+        {
+          this.props.generator != null &&
+          <button onClick={this.props.generator}>
+            {"Generate " + this.props.fieldName}
+          </button>
+        }
         {this.makeTextAreas()}
-        <button onClick={this.props.generator}>
-          {"Generate " + this.props.fieldName}
-        </button>
       </div>
     )
   }
@@ -60,7 +82,7 @@ class ImageViewer extends React.Component {
 class MainComponent extends React.Component {
   constructor(props) {
     super(props);
-    this.state = {blueprint: "", initials: ["","",""], literal: Array(9).fill(""), image: "", target: 0};
+    this.state = {blueprint: "", initials: ["","",""], literal: Array(16).fill(""), image: "", target: undefined};
     
     this.changeBlueprint = this.changeBlueprint.bind(this);
     this.changeInitials = this.changeInitials.bind(this);
@@ -153,6 +175,7 @@ class MainComponent extends React.Component {
       .then((response) => {
         let strLst = this.strListify(response.data["panels"]);
         this.setState({literal: strLst, target: response.data["target"]});
+        console.log(response.data["target"]);
       });
   }
 
@@ -246,13 +269,22 @@ class MainComponent extends React.Component {
             handleChange={this.changeInitials}
             cols={1}
           />
-          <TextInput
-            fieldName={"All Panels"}
-            generator={this.structureToLiteral}
-            values={this.state.literal}
-            handleChange={this.changeLiteral}
-            cols={3}
-          />
+          <div className="flex-child">
+            <TextInput
+              fieldName={"All Panels"}
+              generator={this.structureToLiteral}
+              values={this.state.literal.slice(0,8)}
+              handleChange={this.changeLiteral}
+              cols={3}
+            />
+            <TextInput
+              fieldName={"Answer Choices"}
+              values={this.state.literal.slice(8)}
+              handleChange={this.changeLiteral}
+              highlightIndex={this.state.target}
+              cols={4}
+            />
+          </div>
           <ImageViewer
             generator={this.literalToImage}
             image={this.state.image}
