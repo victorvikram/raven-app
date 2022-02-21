@@ -3,38 +3,38 @@ import React, { useState } from 'react';
 
 import axios from 'axios';
 
-let url = "https://ravenserver.herokuapp.com";
-// let url = "http://localhost:5000";
+// let url = "https://ravenserver.herokuapp.com";
+let url = "http://localhost:5000";
 
 class TextInput extends React.Component {
 
   makeTextAreas() {
     let textAreas = [];
     let rowList = []
+    let startIndex;
+    if(this.props.startIndex == null) {
+      startIndex = 0;
+    } else {
+      startIndex = this.props.startIndex
+    }
   
     for(let i in this.props.values) {
-      let [rowCount, colCount] = this.calculateRequiredSize(this.props.values[i]);
+      let i_int = parseInt(i);
+      let [rowCount, colCount] = this.calculateRequiredSize(this.props.values[i_int]);
       let style;
-      if (this.props.highlightIndex != null && parseInt(i) === this.props.highlightIndex) {
+      if (this.props.highlightIndex != null && i_int === this.props.highlightIndex) {
         style = "highlighted"
       } else {
         style = "regular"
       }
-      console.log("hl index", this.props.highlightIndex)
-      console.log("i", i)
-      console.log("equal?", i === this.props.highlightIndex)
-      console.log("type", typeof(i))
-      console.log("type", typeof(this.props.highlightIndex))
-      console.log("non null", this.props.highlightIndex != null)
-      
-
+   
       rowList.push(
-        <div key={i % this.props.cols}>
-          <textarea rows={rowCount} cols={colCount} value={this.props.values[i]} onChange={(event) => this.props.handleChange(event, i)} className={style}/>
+        <div key={i_int % this.props.cols}>
+          <textarea rows={rowCount} cols={colCount} value={this.props.values[i_int]} onChange={(event) => this.props.handleChange(event, startIndex + i_int)} className={style}/>
         </div>
       )
-      if(i % this.props.cols === this.props.cols - 1 || i === this.props.values.length) {
-        textAreas.push(<div className="flex-container" key={Math.floor(i / this.props.cols)}>{rowList}</div>);
+      if(i_int % this.props.cols === this.props.cols - 1 || i_int === this.props.values.length) {
+        textAreas.push(<div className="flex-container" key={Math.floor(i_int / this.props.cols)}>{rowList}</div>);
         rowList = []
       }
     }
@@ -106,9 +106,7 @@ class MainComponent extends React.Component {
   }
 
   changeLiteral(event, i) {
-    console.log("changing literal at", i);
     let newLiteral = this.makeNewArr(event.target.value, i, this.state.literal)
-    console.log(JSON.stringify(newLiteral));
   
     this.setState({literal: newLiteral});
   }
@@ -153,6 +151,7 @@ class MainComponent extends React.Component {
 
   strListParse(lst) {
     let jsonLst = [];
+
     for(let i in lst) {
       if(lst[i] === "") {
         jsonLst.push({});
@@ -175,7 +174,6 @@ class MainComponent extends React.Component {
       .then((response) => {
         let strLst = this.strListify(response.data["panels"]);
         this.setState({literal: strLst, target: response.data["target"]});
-        console.log(response.data["target"]);
       });
   }
 
@@ -282,6 +280,7 @@ class MainComponent extends React.Component {
               values={this.state.literal.slice(8)}
               handleChange={this.changeLiteral}
               highlightIndex={this.state.target}
+              startIndex={8}
               cols={4}
             />
           </div>
