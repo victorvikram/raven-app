@@ -3,8 +3,8 @@ import React, { useState } from 'react';
 
 import axios from 'axios';
 
-let url = "https://ravenserver.herokuapp.com";
-//let url = "http://localhost:5000";
+// let url = "https://ravenserver.herokuapp.com";
+let url = "http://localhost:5000";
 
 class TextInput extends React.Component {
 
@@ -70,26 +70,40 @@ class ImageViewer extends React.Component {
   render() {
     return (
       <div className="flex-child">
-        <img src={this.props.image} alt="raven-problem" />
         <button onClick={this.props.generator}>
           {"Generate Image"}
         </button>
+        <img src={this.props.image} alt="raven-problem" />
       </div>
     )
   }
 }
 
+
+function downloadItem(uri, fileName) { 
+  const link = document.createElement('a');
+  
+  link.href = uri;
+  link.setAttribute(
+    'download',
+    fileName
+  );
+
+  document.body.appendChild(link);
+  link.click();
+  link.parentNode.removeChild(link);
+}
+
 class MainComponent extends React.Component {
   constructor(props) {
     super(props);
-    this.state = {blueprint: "", initials: ["","",""], literal: Array(16).fill(""), image: "", target: undefined};
+    this.state = {blueprint: "", initials: ["","",""], literal: Array(16).fill(""), image: "", target: undefined, human: true};
     
     this.changeBlueprint = this.changeBlueprint.bind(this);
     this.changeInitials = this.changeInitials.bind(this);
     this.structureToLiteral = this.structureToLiteral.bind(this);
     this.changeLiteral = this.changeLiteral.bind(this);
     this.literalToImage = this.literalToImage.bind(this);
-    this.structureToImage = this.structureToImage.bind(this);
     this.generateBlueprint = this.generateBlueprint.bind(this);
     this.generateInitials = this.generateInitials.bind(this);
     this.downloadNPZ = this.downloadNPZ.bind(this);
@@ -129,7 +143,7 @@ class MainComponent extends React.Component {
 
   generateInitials() {
     let requestUrl = url + "/initials";
-    let body = JSON.parse(this.state.blueprint);
+    let body = {blueprint: JSON.parse(this.state.blueprint), human: this.state.human};
     axios
       .post(
         requestUrl,
@@ -166,7 +180,7 @@ class MainComponent extends React.Component {
   structureToLiteral() {
     let requestUrl = url + `/literal`;
     let initialJSON = this.strListParse(this.state.initials);
-    let body = [JSON.parse(this.state.blueprint), initialJSON];
+    let body = {blueprint: JSON.parse(this.state.blueprint), initial: initialJSON, human: this.state.human};
     axios
       .post(
         requestUrl,
@@ -179,7 +193,7 @@ class MainComponent extends React.Component {
   }
 
   genFullLiteral() {
-    let fullLiteral = {"target": this.state.target};
+    let fullLiteral = {"target": this.state.target, "human": this.state.human};
     fullLiteral["panels"] = this.strListParse(this.state.literal);
     return fullLiteral;
   }
@@ -215,56 +229,42 @@ class MainComponent extends React.Component {
         const url = window.URL.createObjectURL(
           new Blob([response.data]),
         );
-        this.downloadItem(url, fileName + ".npz");
+        downloadItem(url, fileName + ".npz");
       })
   }
 
   downloadLiteral(fileName) {
     let literal = this.genFullLiteral();
     let literalUri = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(literal, null, 2));
-    this.downloadItem(literalUri, fileName + ".json");
+    downloadItem(literalUri, fileName + ".json");
   }
 
   downloadImage(fileName) {
     let bitString = this.state.image.split(',')[1]
     let imageUri = 'data:application/oct-stream;base64,' + bitString;
-    this.downloadItem(imageUri, fileName + ".jpg");
+    downloadItem(imageUri, fileName + ".jpg");
   }
 
-  downloadItem(uri, fileName) { 
-    const link = document.createElement('a');
-    
-    link.href = uri;
-    link.setAttribute(
-      'download',
-      fileName
-    );
-
-    document.body.appendChild(link);
-    link.click();
-    link.parentNode.removeChild(link);
-    
-  }
-
-  structureToImage() {
-    let literal = "poop poop poop" + this.state.structure;
-    let image = "pee pee pee" + literal;
-    this.setState({literal: literal})
-    this.setState({image: image})
-  }
-
+  
+  
   render() {
+    console.log(this.state.target)
     return (
       <div>
         <div className="flex-container">
-          <TextInput
-            fieldName={"Blueprint"}
-            generator={this.generateBlueprint}
-            values={[this.state.blueprint]}
-            handleChange={this.changeBlueprint}
-            cols={1}
-
-          />
+          <div className="flex-child">
+            <HumanCheckbox 
+              checked={this.state.human} 
+              handleChange={(e) => this.setState({human: e.target.checked})}
+            />
+            <TextInput
+              fieldName={"Blueprint"}
+              generator={this.generateBlueprint}
+              values={[this.state.blueprint]}
+              handleChange={this.changeBlueprint}
+              cols={1}
+            />
+          </div>
           <TextInput
             fieldName={"Initial Panels"}
             generator={this.generateInitials}
@@ -280,13 +280,15 @@ class MainComponent extends React.Component {
               handleChange={this.changeLiteral}
               cols={3}
             />
+            <LabeledNumberInput label={"Correct answer:"} value={this.state.target} onChange={(e) => this.setState({target: parseInt(e.target.value)})}/>
+            
             <TextInput
               fieldName={"Answer Choices"}
               values={this.state.literal.slice(8)}
               handleChange={this.changeLiteral}
               highlightIndex={this.state.target}
               startIndex={8}
-              cols={4}
+              cols={3}
             />
           </div>
           <ImageViewer
@@ -295,15 +297,91 @@ class MainComponent extends React.Component {
           />
         </div>
         <DownloadButton downloadImage={this.downloadImage} downloadLiteral={this.downloadLiteral} downloadNPZ={this.downloadNPZ} />
+        <SetGenerator />
       </div>
        
     )
   }
 }
 
+export function LabeledNumberInput(props) {
+  const { label, value, onChange } = props;
+
+  return (
+    <label>
+      {label} 
+      <input type="number" value={value} onChange={onChange} />
+    </label>
+  );
+}
+
+export function SelectList(props) {
+  let { options, value, onChange } = props;
+
+  let htmlOptions = []
+  for(let option in options) {
+    htmlOptions.push(<option value={options[option]} key={option}>{options[option]}</option>)
+  }
+
+  return (
+    <select value={value} onChange={onChange}>
+      {htmlOptions}
+    </select>
+  );
+
+}
+export function SetGenerator(props) {
+  const [count, setCount] = useState(10);
+  const [mag, setMag] = useState("all");
+  const [concept, setConcept] = useState("sameness");
+
+  console.log(count)
+
+  function requestSet() {
+    let body = {concept: concept, mag: mag, count: count};
+    axios
+      .post(
+        url + '/createset',
+        body,
+        { responseType: 'blob' },
+      )
+      .then(response => {
+        const url = window.URL.createObjectURL(
+          new Blob([response.data]),
+        );
+        downloadItem(url, `${concept}_problems.zip`);
+      })
+  }
+
+  return (
+    <div className="flex-child">
+      <LabeledNumberInput label={"Count: "} value={count} onChange={(e) => setCount(parseInt(e.target.value))}/>
+      <SelectList options={["sameness", "progression"]} value={concept} onChange={(e) => setConcept(e.target.value)} />
+      <SelectList options={["all", "boost"]} value={mag} onChange={(e) => setMag(e.target.value)} />
+      <button onClick={() => requestSet()}>Download set</button>
+    </div>
+  );
+}
+
+export function HumanCheckbox(props) {
+  const {checked, handleChange} = props;
+  return (
+    <div>
+      <label>
+        <input
+          name="isGoing"
+          type="checkbox"
+          checked={checked}
+          onChange={handleChange} />
+        Human Readable
+      </label>
+    </div>
+  );
+}
+
 export function DownloadButton(props) {
   const {downloadImage, downloadLiteral, downloadNPZ} = props;
-  let [fileName, setFileName] = useState("");
+  const [fileName, setFileName] = useState("");
 
   function downloadAll() {
     downloadImage(fileName);
