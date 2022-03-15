@@ -333,12 +333,13 @@ export function SelectList(props) {
 export function SetGenerator(props) {
   const [count, setCount] = useState(10);
   const [mag, setMag] = useState("all");
-  const [concept, setConcept] = useState("sameness");
+  const [concept, setConcept] = useState("constant");
+  const [genClass, setGenClass] = useState("base");
 
   console.log(count)
 
   function requestSet() {
-    let body = {concept: concept, mag: mag, count: count};
+    let body = {concept: concept, mag: mag, count: count, genClass: genClass};
     axios
       .post(
         url + '/createset',
@@ -349,15 +350,16 @@ export function SetGenerator(props) {
         const url = window.URL.createObjectURL(
           new Blob([response.data]),
         );
-        downloadItem(url, `${concept}_problems.zip`);
+        downloadItem(url, `${concept}_${mag}_${genClass}_problems.zip`);
       })
   }
 
   return (
     <div className="flex-child">
       <LabeledNumberInput label={"Count: "} value={count} onChange={(e) => setCount(parseInt(e.target.value))}/>
-      <SelectList options={["sameness", "progression"]} value={concept} onChange={(e) => setConcept(e.target.value)} />
+      <SelectList options={["base", "constant", "progression"]} value={concept} onChange={(e) => setConcept(e.target.value)} />
       <SelectList options={["all", "boost"]} value={mag} onChange={(e) => setMag(e.target.value)} />
+      <SelectList options={["base", "position_row_col"]} onChange={(e) => setGenClass(e.target.value)} />
       <button onClick={() => requestSet()}>Download set</button>
     </div>
   );
