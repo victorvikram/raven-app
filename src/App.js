@@ -3,8 +3,8 @@ import React, { useState } from 'react';
 
 import axios from 'axios';
 
-let url = "https://ravenserver.herokuapp.com";
-// let url = "http://localhost:5000";
+// let url = "https://ravenserver.herokuapp.com";
+let url = "http://localhost:5000";
 
 class TextInput extends React.Component {
 
@@ -359,7 +359,7 @@ export function SetGenerator(props) {
       <LabeledNumberInput label={"Count: "} value={count} onChange={(e) => setCount(parseInt(e.target.value))}/>
       <SelectList options={["base", "constant", "progression"]} value={concept} onChange={(e) => setConcept(e.target.value)} />
       <SelectList options={["all", "boost"]} value={mag} onChange={(e) => setMag(e.target.value)} />
-      <SelectList options={["base", "position_row_col"]} onChange={(e) => setGenClass(e.target.value)} />
+      <SelectList options={["base", "position_row_col", "linecolor", "linesize", "outer_color"]} onChange={(e) => setGenClass(e.target.value)} />
       <button onClick={() => requestSet()}>Download set</button>
     </div>
   );
