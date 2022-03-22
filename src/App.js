@@ -3,8 +3,8 @@ import React, { useState } from 'react';
 
 import axios from 'axios';
 
-let url = "https://ravenserver.herokuapp.com";
-// let url = "http://localhost:5000";
+// let url = "https://ravenserver.herokuapp.com";
+let url = "http://localhost:5000";
 
 class TextInput extends React.Component {
 
@@ -333,7 +333,7 @@ export function SelectList(props) {
 export function SetGenerator(props) {
   const [count, setCount] = useState(10);
   const [mag, setMag] = useState("all");
-  const [concept, setConcept] = useState("constant");
+  const [concept, setConcept] = useState("base");
   const [genClass, setGenClass] = useState("base");
 
   console.log(count)
@@ -354,12 +354,49 @@ export function SetGenerator(props) {
       })
   }
 
+  function onGenClassChange(e) {
+    let newGenClass = e.target.value
+    if(newGenClass === "slippage") {
+      setConcept("base")
+    }
+    setGenClass(newGenClass)
+  }
+  function onConceptChange(e) {
+    let newConcept = e.target.value
+    if(newConcept === "base") {
+      setMag("none")
+    } else if(newConcept !== "base" && mag === "none") {
+      setMag("all")
+    }
+    setConcept(newConcept)
+  }
+
+  function getConceptOptions() {
+    if(genClass === "slippage") {
+      return ["base"]
+    } else {
+      return ["base", "constant", "progression"]
+    }
+  }
+
+  function getMagOptions() {
+    if(concept === "base") {
+      return ["none"]
+    } else {
+      return ["all", "boost"]
+    }
+  }
+
+  function getGenClassOptions() {
+    return ["base", "position_row_col", "linecolor", "linesize", "outer_color", "slippage"];
+  }
+
   return (
     <div className="flex-child">
       <LabeledNumberInput label={"Count: "} value={count} onChange={(e) => setCount(parseInt(e.target.value))}/>
-      <SelectList options={["base", "constant", "progression"]} value={concept} onChange={(e) => setConcept(e.target.value)} />
-      <SelectList options={["all", "boost"]} value={mag} onChange={(e) => setMag(e.target.value)} />
-      <SelectList options={["base", "position_row_col", "linecolor", "linesize", "outer_color"]} onChange={(e) => setGenClass(e.target.value)} />
+      <SelectList options={getConceptOptions()} value={concept} onChange={onConceptChange} />
+      <SelectList options={getMagOptions()} value={mag} onChange={(e) => setMag(e.target.value)} />
+      <SelectList options={getGenClassOptions()} onChange={onGenClassChange} />
       <button onClick={() => requestSet()}>Download set</button>
     </div>
   );
