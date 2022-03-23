@@ -372,7 +372,7 @@ export function SetGenerator(props) {
   }
 
   function getConceptOptions() {
-    if(genClass === "slippage") {
+    if(genClass === "slippage" || genClass == "switch_comps") {
       return ["base"]
     } else {
       return ["base", "constant", "progression"]
@@ -388,7 +388,7 @@ export function SetGenerator(props) {
   }
 
   function getGenClassOptions() {
-    return ["base", "position_row_col", "linecolor", "linesize", "outer_color", "slippage"];
+    return ["base", "position_row_col", "linecolor", "linesize", "outer_color", "slippage", "switch_comps"];
   }
 
   return (
