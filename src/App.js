@@ -3,8 +3,8 @@ import React, { useState } from 'react';
 
 import axios from 'axios';
 
-let url = "https://ravenserver.herokuapp.com";
-// let url = "http://localhost:5000";
+// let url = "https://ravenserver.herokuapp.com";
+let url = "http://localhost:5000";
 
 class TextInput extends React.Component {
 
@@ -97,7 +97,7 @@ function downloadItem(uri, fileName) {
 class MainComponent extends React.Component {
   constructor(props) {
     super(props);
-    this.state = {blueprint: "", initials: ["","",""], literal: Array(16).fill(""), image: "", target: undefined, human: true};
+    this.state = {blueprint: "", initials: ["","",""], literal: Array(16).fill(""), image: "", target: undefined, human: true, structure: "any"};
     
     this.changeBlueprint = this.changeBlueprint.bind(this);
     this.changeInitials = this.changeInitials.bind(this);
@@ -109,6 +109,7 @@ class MainComponent extends React.Component {
     this.downloadNPZ = this.downloadNPZ.bind(this);
     this.downloadLiteral = this.downloadLiteral.bind(this);
     this.downloadImage = this.downloadImage.bind(this);
+    this.uploadJSON = this.uploadJSON.bind(this);
   }
 
   changeBlueprint(event, i=0) {
@@ -133,11 +134,16 @@ class MainComponent extends React.Component {
   }
 
   generateBlueprint() {
+
     let requestUrl = url + "/blueprint";
-    fetch(requestUrl)
-      .then((res) => res.json())
-      .then((data) => {
-          this.setState({blueprint: JSON.stringify(data, null, 2)})
+    let body = {structure: this.state.structure};
+    axios
+      .post(
+        requestUrl,
+        body
+      )
+      .then((response) => {
+          this.setState({blueprint: JSON.stringify(response.data, null, 2)})
       });
   }
 
@@ -153,7 +159,6 @@ class MainComponent extends React.Component {
         let strLst = this.strListify(response.data["results"]);
         this.setState({initials: strLst});
     });
-
   }
 
   strListify(lst) {
@@ -190,6 +195,25 @@ class MainComponent extends React.Component {
         let strLst = this.strListify(response.data["panels"]);
         this.setState({literal: strLst, target: response.data["target"]});
       });
+  }
+
+  uploadJSON(e) {
+    const fileReader = new FileReader();
+    fileReader.readAsText(e.target.files[0], "UTF-8");
+    fileReader.onload = e => {
+        let literalJSON = JSON.parse(e.target.result);
+        let human;
+        if('human' in literalJSON) {
+          human = literalJSON["human"];
+        } else {
+          human = this.state.human;
+        }
+        
+        let target = literalJSON["target"];
+        let panelLst = this.strListify(literalJSON["panels"]);
+        this.setState({literal: panelLst, human: human, target: target})
+
+    };
   }
 
   genFullLiteral() {
@@ -246,9 +270,7 @@ class MainComponent extends React.Component {
   }
 
   
-  
   render() {
-    console.log(this.state.target)
     return (
       <div>
         <div className="flex-container">
@@ -257,6 +279,7 @@ class MainComponent extends React.Component {
               checked={this.state.human} 
               handleChange={(e) => this.setState({human: e.target.checked})}
             />
+            <SelectList options={["any", "center_single", "distribute_four", "distribute_nine", "out_in", "out_in_grid", "left_right", "up_down"]} value={this.state.structure} onChange={(e) => this.setState({structure: e.target.value})} />
             <TextInput
               fieldName={"Blueprint"}
               generator={this.generateBlueprint}
@@ -273,6 +296,7 @@ class MainComponent extends React.Component {
             cols={1}
           />
           <div className="flex-child">
+            <FileUpload handleChange={this.uploadJSON} />
             <TextInput
               fieldName={"All Panels"}
               generator={this.structureToLiteral}
@@ -302,6 +326,16 @@ class MainComponent extends React.Component {
        
     )
   }
+}
+
+export function FileUpload(props) {
+  const {handleChange} = props;
+  return (
+      <div>
+          <input type="file" onChange={handleChange} />
+      </div>
+  );
+
 }
 
 export function LabeledNumberInput(props) {
@@ -335,11 +369,11 @@ export function SetGenerator(props) {
   const [mag, setMag] = useState("all");
   const [concept, setConcept] = useState("base");
   const [genClass, setGenClass] = useState("base");
-
-  console.log(count)
+  const [structure, setStructure] = useState("any");
+  const [onlyConcept, setOnlyConcept] = useState(true);
 
   function requestSet() {
-    let body = {concept: concept, mag: mag, count: count, genClass: genClass};
+    let body = {concept: concept, mag: mag, count: count, genClass: genClass, structure: structure, onlyConcept: onlyConcept};
     axios
       .post(
         url + '/createset',
@@ -372,7 +406,7 @@ export function SetGenerator(props) {
   }
 
   function getConceptOptions() {
-    if(genClass === "slippage" || genClass == "switch_comps") {
+    if(genClass === "slippage" || genClass === "switch_comps") {
       return ["base"]
     } else {
       return ["base", "constant", "progression"]
@@ -391,12 +425,23 @@ export function SetGenerator(props) {
     return ["base", "position_row_col", "linecolor", "linesize", "outer_color", "slippage", "switch_comps"];
   }
 
+  // console.log(structure)
   return (
     <div className="flex-child">
       <LabeledNumberInput label={"Count: "} value={count} onChange={(e) => setCount(parseInt(e.target.value))}/>
+      <SelectList options={["any", "center_single", "distribute_four", "distribute_nine", "out_in", "out_in_grid", "left_right", "up_down"]} value={structure} onChange={(e) => setStructure(e.target.value)} />
       <SelectList options={getConceptOptions()} value={concept} onChange={onConceptChange} />
       <SelectList options={getMagOptions()} value={mag} onChange={(e) => setMag(e.target.value)} />
       <SelectList options={getGenClassOptions()} onChange={onGenClassChange} />
+      <div>
+        <label>
+          <input
+            type="checkbox"
+            checked={onlyConcept}
+            onChange={(e) => setOnlyConcept(e.target.checked)} />
+          Only chosen concept 
+        </label>
+      </div>
       <button onClick={() => requestSet()}>Download set</button>
     </div>
   );
