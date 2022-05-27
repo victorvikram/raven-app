@@ -304,7 +304,7 @@ class MainComponent extends React.Component {
               handleChange={this.changeLiteral}
               cols={3}
             />
-            <LabeledNumberInput label={"Correct answer:"} value={this.state.target} onChange={(e) => this.setState({target: parseInt(e.target.value)})}/>
+            <LabeledNumberInput label={"Correct answer:"} value={this.state.target + 1} onChange={(e) => this.setState({target: parseInt(e.target.value) - 1})}/>
             
             <TextInput
               fieldName={"Answer Choices"}
