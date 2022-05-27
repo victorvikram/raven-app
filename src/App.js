@@ -3,14 +3,14 @@ import React, { useState } from 'react';
 
 import axios from 'axios';
 
-// let url = "https://ravenserver.herokuapp.com";
-let url = "http://localhost:5000";
+let url = "https://ravenserver.herokuapp.com";
+// let url = "http://localhost:5000";
 
 class TextInput extends React.Component {
 
   makeTextAreas() {
     let textAreas = [];
-    let rowList = []
+    let rowList = [];
     let startIndex;
     if(this.props.startIndex == null) {
       startIndex = 0;
