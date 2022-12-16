@@ -16,7 +16,7 @@ pip install -r requirements.txt`. This installs the necessary python packages.
 *Powershell*: `$env:FLASK_APP = "app"`
 *Cmd*: `set FLASK_APP=app`
 *Bash*: `export FLASK_APP=app`
-Then, run `flask run`.
+Then, run `flask run -h localhost -p 5000`.
 And that's all!
 
 You may need to ensure that the line `let url = <url>` at the top of `app.js` in the RAVEN app root directory matches with the URL of the flask server (it will tell you the URL it is running on after you run `flask run`). Note that `localhost` and `127.0.0.1` are equivalent.
